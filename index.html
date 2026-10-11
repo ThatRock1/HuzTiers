@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huztiers - Minecraft Tier List & Leaderboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
+        body { font-family: 'Outfit', sans-serif; }
+        .tier-row { min-height: 90px; }
+        .player-chip { cursor: grab; transition: transform 0.1s ease, box-shadow 0.1s ease; }
+        .player-chip:active { cursor: grabbing; }
+        .player-chip:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(51, 65, 85, 0.8); border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(71, 85, 105, 1); }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen selection:bg-indigo-500 selection:text-white">
+
+    <!-- Header -->
+    <header class="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 font-black text-xl tracking-wider">HZ</div>
+                <div>
+                    <h1 class="text-2xl font-black tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">HUZTIERS</h1>
+                    <p class="text-xs font-medium text-slate-400">Competitive Minecraft Rankings & Points</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button onclick="openSearchModal()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 text-slate-300 transition-all">
+                    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    Search Player
+                </button>
+
+                <button onclick="switchGamemode('overall')" class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 transition-all">
+                    <span class="text-sm">🏆</span>
+                    Overall Leaderboard
+                </button>
+
+                <button id="authBtn" onclick="handleAuthClick()" class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition-all">
+                    <svg id="authIcon" class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    <span id="authBtnText">Viewer Mode</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Gamemode Tabs -->
+    <nav class="border-b border-slate-800/60 bg-slate-900/30 overflow-x-auto custom-scrollbar">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex gap-2 min-w-max" id="gamemodesTabs">
+            <!-- Dynamically populated gamemodes -->
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Admin Controls Toolbar (Hidden unless admin) -->
+        <div id="adminToolbar" class="hidden mb-6 p-4 rounded-2xl bg-slate-900/80 border border-indigo-500/30 flex flex-wrap items-center justify-between gap-4 shadow-xl shadow-indigo-950/20">
+            <div class="flex items-center gap-3">
+                <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="text-xs font-bold uppercase tracking-wider text-indigo-400">Admin Mode Active</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="openAddPlayerModal()" class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20 transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    Add Player
+                </button>
+                <button onclick="resetCurrentTierlist()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition-all">
+                    Reset Tier List
+                </button>
+            </div>
+        </div>
+
+        <!-- Tier List / Leaderboard Canvas Container -->
+        <div id="captureArea" class="space-y-4 bg-slate-950 p-2 sm:p-4 rounded-3xl border border-slate-900">
+            <div class="flex items-center justify-between px-2 pb-2">
+                <div class="flex items-center gap-3">
+                    <span id="currentGamemodeIcon" class="text-2xl">💎</span>
+                    <h2 id="currentGamemodeTitle" class="text-xl font-extrabold tracking-tight text-white">Crystal</h2>
+                </div>
+                <span class="text-xs font-semibold text-slate-500">Huztiers Rankings</span>
+            </div>
+
+            <!-- Main Dynamic Container (Tier Board or Leaderboard) -->
+            <div id="mainViewContainer" class="space-y-3">
+                <!-- Dynamically generated rows -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Search Player Modal -->
+    <div id="searchModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    Search Player Ranks
+                </h3>
+                <button onclick="closeSearchModal()" class="text-slate-400 hover:text-white">✕</button>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="flex gap-2">
+                    <input type="text" id="searchPlayerInput" placeholder="Enter Minecraft IGN (e.g. Notch)" class="flex-1 px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 transition-all">
+                    <button onclick="performPlayerSearch()" class="px-5 py-3 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-lg shadow-indigo-600/20">Search</button>
+                </div>
+
+                <div id="searchResultsContainer" class="space-y-3 pt-2">
+                    <p class="text-xs text-slate-500 text-center py-6">Type a player's username above to view their tiers across all gamemodes.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="passwordModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6">
+            <div class="text-center space-y-2">
+                <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto text-xl font-bold">🔒</div>
+                <h3 class="text-lg font-bold text-white">Enter Admin Password</h3>
+                <p class="text-xs text-slate-400">Unlock editing capabilities for Huztiers.</p>
+            </div>
+            <form onsubmit="verifyPassword(event)" class="space-y-4">
+                <input type="password" id="adminPasswordInput" placeholder="Enter password..." class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 transition-all" required>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closePasswordModal()" class="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">Cancel</button>
+                    <button type="submit" class="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 transition-all">Unlock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Player Modal -->
+    <div id="addPlayerModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold text-white">Add New Player</h3>
+                <button onclick="closeAddPlayerModal()" class="text-slate-400 hover:text-white">✕</button>
+            </div>
+            <form onsubmit="handleAddPlayerSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5">Player Minecraft IGN</label>
+                    <input type="text" id="newPlayerName" placeholder="e.g. PlayerName" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 transition-all" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5">Region</label>
+                    <select id="newPlayerRegion" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 transition-all">
+                        <option value="NA">NA</option>
+                        <option value="EU">EU</option>
+                        <option value="AS">AS</option>
+                        <option value="SA">SA</option>
+                        <option value="ME">ME</option>
+                        <option value="OC">OC</option>
+                        <option value="DK">DK</option>
+                        <option value="DE">DE</option>
+                        <option value="US">US</option>
+                        <option value="MX">MX</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5">Initial Tier</label>
+                    <select id="newPlayerTier" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 transition-all">
+                        <option value="HT1">HT1 (60 pts)</option>
+                        <option value="LT1">LT1 (45 pts)</option>
+                        <option value="HT2">HT2 (30 pts)</option>
+                        <option value="LT2">LT2 (20 pts)</option>
+                        <option value="HT3">HT3 (10 pts)</option>
+                        <option value="LT3">LT3 (6 pts)</option>
+                        <option value="HT4">HT4 (4 pts)</option>
+                        <option value="LT4">LT4 (3 pts)</option>
+                        <option value="HT5">HT5 (2 pts)</option>
+                        <option value="LT5">LT5 (1 pt)</option>
+                    </select>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeAddPlayerModal()" class="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">Cancel</button>
+                    <button type="submit" class="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20 transition-all">Add Player</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        const CORRECT_PASSWORD = "huztiers78!a)";
+        let isAdmin = false;
+        let currentGamemode = "crystal";
+
+        // Gamemodes list with Cart (TNT Minecart) and Mace using reliable wiki/cdn asset URLs
+        const gamemodes = [
+            { id: "crystal", name: "Crystal", icon: "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/textures/item/end_crystal.png" },
+            { id: "sword", name: "Sword", icon: "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/textures/item/diamond_sword.png" },
+            { id: "spearmace", name: "Spearmace", icon: "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/textures/item/trident.png" },
+            { id: "mace", name: "Mace", icon: "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21/assets/minecraft/textures/item/mace.png" },
+            { id: "cart", name: "Cart", icon: "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/textures/item/minecart_with_tnt.png" },
+            { id: "diamondsmp", name: "Diamond SMP", icon: "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/textures/item/diamond_chestplate.png" },
+            { id: "elytraspear", name: "Elytra Spear", icon: "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/textures/item/elytra.png" },
+            { id: "smp", name: "SMP", icon: "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/textures/item/netherite_pickaxe.png" },
+            { id: "uhc", name: "UHC", icon: "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/textures/item/golden_apple.png" },
+            { id: "shieldlessuhc", name: "Shieldless UHC", icon: "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/textures/block/cobblestone.png" },
+            { id: "diamondpot", name: "Diamond Pot", icon: "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/textures/item/splash_potion.png" },
+            { id: "nethpot", name: "Neth-Pot", icon: "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/textures/item/lingering_potion.png" },
+            { id: "overall", name: "Overall Leaderboard", icon: "🏆" }
+        ];
+
+        // Tier Point Values
+        const tierPoints = {
+            "HT1": 60,
+            "LT1": 45,
+            "HT2": 30,
+            "LT2": 20,
+            "HT3": 10,
+            "LT3": 6,
+            "HT4": 4,
+            "LT4": 3,
+            "HT5": 2,
+            "LT5": 1
+        };
+
+        const tiers = [
+            { id: "HT1", label: "HT1", bg: "bg-red-950/40 border-red-800/60", badge: "bg-red-600 text-white shadow-red-900/50" },
+            { id: "LT1", label: "LT1", bg: "bg-rose-950/30 border-rose-800/50", badge: "bg-rose-600 text-white shadow-rose-900/50" },
+            { id: "HT2", label: "HT2", bg: "bg-orange-950/40 border-orange-800/60", badge: "bg-orange-600 text-white shadow-orange-900/50" },
+            { id: "LT2", label: "LT2", bg: "bg-amber-950/30 border-amber-800/50", badge: "bg-amber-600 text-white shadow-amber-900/50" },
+            { id: "HT3", label: "HT3", bg: "bg-yellow-950/30 border-yellow-800/50", badge: "bg-yellow-600 text-white shadow-yellow-900/50" },
+            { id: "LT3", label: "LT3", bg: "bg-lime-950/30 border-lime-800/50", badge: "bg-lime-600 text-white shadow-lime-900/50" },
+            { id: "HT4", label: "HT4", bg: "bg-emerald-950/40 border-emerald-800/60", badge: "bg-emerald-600 text-white shadow-emerald-900/50" },
+            { id: "LT4", label: "LT4", bg: "bg-teal-950/30 border-teal-800/50", badge: "bg-teal-600 text-white shadow-teal-900/50" },
+            { id: "HT5", label: "HT5", bg: "bg-sky-950/40 border-sky-800/60", badge: "bg-sky-600 text-white shadow-sky-900/50" },
+            { id: "LT5", label: "LT5", bg: "bg-blue-950/30 border-blue-800/50", badge: "bg-blue-600 text-white shadow-blue-900/50" }
+        ];
+
+        let tierData = {};
+        let playerRegions = {};
+
+        function initTierData() {
+            gamemodes.forEach(gm => {
+                if (gm.id === "overall") return;
+                tierData[gm.id] = {};
+                tiers.forEach(t => {
+                    tierData[gm.id][t.id] = [];
+                });
+            });
+        }
+
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem("huztiers_data_v30");
+            if (saved) {
+                try {
+                    tierData = JSON.parse(saved);
+                    gamemodes.forEach(gm => {
+                        if (gm.id === "overall") return;
+                        if (!tierData[gm.id]) tierData[gm.id] = {};
+                        tiers.forEach(t => {
+                            if (!tierData[gm.id][t.id]) tierData[gm.id][t.id] = [];
+                        });
+                    });
+                } catch (e) {
+                    initTierData();
+                }
+            } else {
+                initTierData();
+            }
+
+            const savedRegions = localStorage.getItem("huztiers_regions_v30");
+            if (savedRegions) {
+                try { playerRegions = JSON.parse(savedRegions); } catch(e) { playerRegions = {}; }
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem("huztiers_data_v30", JSON.stringify(tierData));
+            localStorage.setItem("huztiers_regions_v30", JSON.stringify(playerRegions));
+        }
+
+        function renderGamemodeTabs() {
+            const container = document.getElementById("gamemodesTabs");
+            const activeGamemodes = gamemodes.filter(gm => gm.id !== "overall");
+            container.innerHTML = activeGamemodes.map(gm => {
+                const isActive = gm.id === currentGamemode;
+                const iconHtml = gm.icon.startsWith("http") ? `<img src="${gm.icon}" class="w-5 h-5 object-contain" style="image-rendering: pixelated;" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/textures/item/minecart.png';">` : `<span class="text-base">${gm.icon}</span>`;
+                return `
+                    <button onclick="switchGamemode('${gm.id}')" class="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all ${isActive ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800/80'}">
+                        ${iconHtml}
+                        <span>${gm.name}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function switchGamemode(id) {
+            currentGamemode = id;
+            const gm = gamemodes.find(g => g.id === id);
+            const headerIcon = document.getElementById("currentGamemodeIcon");
+            if (gm.icon.startsWith("http")) {
+                headerIcon.innerHTML = `<img src="${gm.icon}" class="w-7 h-7 object-contain" style="image-rendering: pixelated;" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/textures/item/minecart.png';">`;
+            } else {
+                headerIcon.innerText = gm.icon;
+            }
+            document.getElementById("currentGamemodeTitle").innerText = gm.name;
+            renderGamemodeTabs();
+            renderMainView();
+        }
+
+        function renderMainView() {
+            if (currentGamemode === "overall") {
+                renderOverallLeaderboard();
+            } else {
+                renderTierBoard();
+            }
+        }
+
+        function renderTierBoard() {
+            const container = document.getElementById("mainViewContainer");
+            const currentGmObj = tierData[currentGamemode] || {};
+
+            container.className = "space-y-3";
+            container.innerHTML = tiers.map(tier => {
+                const players = currentGmObj[tier.id] || [];
+                const verticalChars = tier.label.split('').map(c => `<span class="block leading-none">${c}</span>`).join('');
+
+                const playerChipsHtml = players.map(player => {
+                    const draggableAttr = isAdmin ? `draggable="true" ondragstart="dragStart(event, '${player}', '${tier.id}')"` : '';
+                    const removeBtnHtml = isAdmin ? `<button onclick="removePlayer('${tier.id}', '${player}')" class="ml-2 text-slate-500 hover:text-rose-400 font-normal px-1">×</button>` : '';
+                    
+                    return `
+                        <div class="player-chip flex items-center justify-between gap-3 px-3.5 py-2 rounded-xl bg-slate-900/90 border border-slate-700/60 text-slate-200 text-xs font-bold shadow" ${draggableAttr}>
+                            <span class="tracking-wide">${player}</span>
+                            ${removeBtnHtml}
+                        </div>
+                    `;
+                }).join('');
+
+                const emptyMessageHtml = (players.length === 0 && isAdmin) ? `<span class="text-xs text-slate-600 italic select-none pointer-events-none">Drop players here...</span>` : '';
+
+                return `
+                    <div class="flex rounded-2xl border ${tier.bg} overflow-hidden shadow-md transition-all">
+                        <div class="w-16 flex flex-col items-center justify-center py-4 ${tier.badge} font-black text-sm tracking-widest shrink-0 shadow-inner text-center">
+                            <div class="flex flex-col items-center gap-1">${verticalChars}</div>
+                        </div>
+                        <div class="flex-1 p-3 flex flex-wrap items-center gap-2 min-h-[85px] drop-zone" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="dropPlayer(event, '${tier.id}')">
+                            ${playerChipsHtml}
+                            ${emptyMessageHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderOverallLeaderboard() {
+            const container = document.getElementById("mainViewContainer");
+            let playerStats = {};
+
+            gamemodes.forEach(gm => {
+                if (gm.id === "overall") return;
+                const gmData = tierData[gm.id] || {};
+                tiers.forEach(tier => {
+                    const players = gmData[tier.id] || [];
+                    const pts = tierPoints[tier.id] || 0;
+                    players.forEach(player => {
+                        if (!playerStats[player]) {
+                            playerStats[player] = { name: player, totalPoints: 0, region: playerRegions[player] || "US", ranks: {} };
+                        }
+                        playerStats[player].totalPoints += pts;
+                        playerStats[player].ranks[gm.id] = tier.id;
+                    });
+                });
+            });
+
+            let sortedPlayers = Object.values(playerStats).sort((a, b) => b.totalPoints - a.totalPoints);
+            let top10 = sortedPlayers.slice(0, 10);
+
+            if (top10.length === 0) {
+                container.innerHTML = `<div class="p-8 text-center text-slate-500 text-xs italic bg-slate-900/40 rounded-2xl border border-slate-800">No player rankings recorded yet. Add players to gamemode tiers to populate the overall leaderboard!</div>`;
+                return;
+            }
+
+            let rowsHtml = top10.map((p, idx) => {
+                let rankRibbon = `bg-slate-800 text-slate-300 border-slate-700`;
+                if (idx === 0) rankRibbon = `bg-amber-500 text-slate-950 font-black shadow-lg shadow-amber-500/20`;
+                else if (idx === 1) rankRibbon = `bg-slate-300 text-slate-950 font-black shadow-lg shadow-slate-300/20`;
+                else if (idx === 2) rankRibbon = `bg-amber-700 text-white font-black shadow-lg shadow-amber-700/20`;
+
+                let gamemodesBadgesHtml = gamemodes.filter(g => g.id !== "overall").map(gm => {
+                    const playerTier = p.ranks[gm.id];
+                    if (!playerTier) return '';
+                    const iconHtml = gm.icon.startsWith("http") ? `<img src="${gm.icon}" class="w-5 h-5 object-contain mb-0.5" style="image-rendering: pixelated;" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/textures/item/minecart.png';">` : `<span class="text-sm mb-0.5">${gm.icon}</span>`;
+                    return `
+                        <div class="flex flex-col items-center justify-center p-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-[10px] min-w-[38px]">
+                            ${iconHtml}
+                            <span class="font-black text-indigo-300 text-[9px] mt-0.5">${playerTier}</span>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="flex flex-col md:flex-row items-center justify-between p-4 bg-slate-900/70 border border-slate-800 rounded-2xl gap-4 hover:border-slate-700 transition-all">
+                        <div class="flex items-center gap-4 w-full md:w-auto">
+                            <div class="w-14 h-12 flex items-center justify-center rounded-xl ${rankRibbon} text-base font-black shrink-0">
+                                ${idx + 1}
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <img src="https://mc-api.io/render/HEAD/${p.name}/JAVA?size=64" class="w-10 h-10 rounded-xl bg-slate-950 border border-slate-700" onerror="this.src='https://crafatar.com/avatars/MHF_Steve?size=40&overlay'">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h4 class="text-sm font-extrabold text-white tracking-wide">${p.name}</h4>
+                                        <span class="text-xs font-bold text-slate-400">${p.region}</span>
+                                    </div>
+                                    <p class="text-xs text-slate-400 font-medium">(${p.totalPoints} Points)</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-1.5 flex-wrap justify-end">
+                            ${gamemodesBadgesHtml || '<span class="text-xs text-slate-500 italic">No rankings yet</span>'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.className = "space-y-3";
+            container.innerHTML = rowsHtml;
+        }
+
+        // Drag and Drop Handlers
+        let draggedPlayer = null;
+        let sourceTier = null;
+
+        function dragStart(event, playerName, tId) {
+            if (!isAdmin) return;
+            draggedPlayer = playerName;
+            sourceTier = tId;
+            event.dataTransfer.setData("text/plain", playerName);
+        }
+
+        function allowDrop(event) {
+            if (!isAdmin || currentGamemode === "overall") return;
+            event.preventDefault();
+            event.currentTarget.classList.add("bg-slate-900/40");
+        }
+
+        function dragLeave(event) {
+            event.currentTarget.classList.remove("bg-slate-900/40");
+        }
+
+        function dropPlayer(event, targetTierId) {
+            if (!isAdmin || currentGamemode === "overall") return;
+            event.preventDefault();
+            event.currentTarget.classList.remove("bg-slate-900/40");
+            
+            if (!draggedPlayer || !sourceTier) return;
+
+            const sourceList = tierData[currentGamemode][sourceTier];
+            const index = sourceList.indexOf(draggedPlayer);
+            if (index > -1) {
+                sourceList.splice(index, 1);
+            }
+
+            const targetList = tierData[currentGamemode][targetTierId];
+            if (!targetList.includes(draggedPlayer)) {
+                targetList.push(draggedPlayer);
+            }
+
+            saveToLocalStorage();
+            renderMainView();
+            draggedPlayer = null;
+            sourceTier = null;
+        }
+
+        // Search Player Modal Functionality
+        function openSearchModal() {
+            document.getElementById("searchModal").classList.remove("hidden");
+            document.getElementById("searchPlayerInput").value = "";
+            document.getElementById("searchResultsContainer").innerHTML = '<p class="text-xs text-slate-500 text-center py-6">Type a player\'s username above to view their tiers across all gamemodes.</p>';
+            document.getElementById("searchPlayerInput").focus();
+        }
+
+        function closeSearchModal() {
+            document.getElementById("searchModal").classList.add("hidden");
+        }
+
+        function performPlayerSearch() {
+            const query = document.getElementById("searchPlayerInput").value.trim().toLowerCase();
+            const resultsContainer = document.getElementById("searchResultsContainer");
+
+            if (!query) {
+                resultsContainer.innerHTML = '<p class="text-xs text-rose-400 text-center py-4">Please enter a valid username.</p>';
+                return;
+            }
+
+            let foundRanks = [];
+            let totalPlayerPoints = 0;
+
+            gamemodes.forEach(gm => {
+                if (gm.id === "overall") return;
+                const gmData = tierData[gm.id] || {};
+                tiers.forEach(tier => {
+                    const players = gmData[tier.id] || [];
+                    if (players.some(p => p.toLowerCase() === query)) {
+                        const exactName = players.find(p => p.toLowerCase() === query);
+                        const pts = tierPoints[tier.id] || 0;
+                        totalPlayerPoints += pts;
+                        foundRanks.push({
+                            gamemodeName: gm.name,
+                            gamemodeIcon: gm.icon,
+                            tierId: tier.id,
+                            points: pts,
+                            playerName: exactName
+                        });
+                    }
+                });
+            });
+
+            if (foundRanks.length === 0) {
+                resultsContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">No rankings found for player <strong class="text-white">"${query}"</strong>.</p>`;
+                return;
+            }
+
+            const actualPlayerName = foundRanks[0].playerName;
+            const playerReg = playerRegions[actualPlayerName] || "US";
+
+            let rankItemsHtml = foundRanks.map(rank => {
+                const iconHtml = rank.gamemodeIcon.startsWith("http") ? `<img src="${rank.gamemodeIcon}" class="w-5 h-5 object-contain" style="image-rendering: pixelated;" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/textures/item/minecart.png';">` : `<span class="text-lg">${rank.gamemodeIcon}</span>`;
+                return `
+                    <div class="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800/85 hover:border-slate-700 transition-all">
+                        <div class="flex items-center gap-2.5">
+                            ${iconHtml}
+                            <span class="text-xs font-bold text-slate-200">${rank.gamemodeName}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2.5 py-1 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 font-black text-xs">Tier: ${rank.tierId}</span>
+                            <span class="text-xs text-slate-400 font-semibold">(+${rank.points} pts)</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            resultsContainer.innerHTML = `
+                <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <img src="https://mc-api.io/render/HEAD/${actualPlayerName}/JAVA?size=64" class="w-8 h-8 rounded-lg bg-slate-950 border border-slate-700" onerror="this.src='https://crafatar.com/avatars/MHF_Steve?size=32&overlay'">
+                        <div class="flex items-center gap-2">
+                            <h4 class="text-sm font-bold text-white">${actualPlayerName}</h4>
+                            <span class="text-xs font-bold text-slate-400">${playerReg}</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-400">Total Score: <strong class="text-indigo-400">${totalPlayerPoints} pts</strong></p>
+                </div>
+                <div class="space-y-2 pt-2">
+                    ${rankItemsHtml}
+                </div>
+            `;
+        }
+
+        // Admin Auth Flow
+        function handleAuthClick() {
+            if (isAdmin) {
+                isAdmin = false;
+                updateAuthUI();
+                renderMainView();
+            } else {
+                document.getElementById("passwordModal").classList.remove("hidden");
+                document.getElementById("adminPasswordInput").value = "";
+                document.getElementById("adminPasswordInput").focus();
+            }
+        }
+
+        function verifyPassword(event) {
+            event.preventDefault();
+            const val = document.getElementById("adminPasswordInput").value;
+            if (val === CORRECT_PASSWORD) {
+                isAdmin = true;
+                closePasswordModal();
+                updateAuthUI();
+                renderMainView();
+            } else {
+                alert("Incorrect password!");
+            }
+        }
+
+        function closePasswordModal() {
+            document.getElementById("passwordModal").classList.add("hidden");
+        }
+
+        function updateAuthUI() {
+            const btnText = document.getElementById("authBtnText");
+            const authIcon = document.getElementById("authIcon");
+            const adminToolbar = document.getElementById("adminToolbar");
+
+            if (isAdmin) {
+                btnText.innerText = "Admin Mode";
+                authIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>';
+                adminToolbar.classList.remove("hidden");
+            } else {
+                btnText.innerText = "Viewer Mode";
+                authIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>';
+                adminToolbar.classList.add("hidden");
+            }
+        }
+
+        // Add Player Modal Flow
+        function openAddPlayerModal() {
+            if (!isAdmin || currentGamemode === "overall") return;
+            document.getElementById("addPlayerModal").classList.remove("hidden");
+            document.getElementById("newPlayerName").value = "";
+            document.getElementById("newPlayerName").focus();
+        }
+
+        function closeAddPlayerModal() {
+            document.getElementById("addPlayerModal").classList.add("hidden");
+        }
+
+        function handleAddPlayerSubmit(event) {
+            event.preventDefault();
+            const name = document.getElementById("newPlayerName").value.trim();
+            const region = document.getElementById("newPlayerRegion").value;
+            const tier = document.getElementById("newPlayerTier").value;
+
+            if (!name) return;
+
+            playerRegions[name] = region;
+
+            if (!tierData[currentGamemode][tier].includes(name)) {
+                tierData[currentGamemode][tier].push(name);
+                saveToLocalStorage();
+                renderMainView();
+            }
+            closeAddPlayerModal();
+        }
+
+        function removePlayer(tierId, playerName) {
+            if (!isAdmin) return;
+            const list = tierData[currentGamemode][tierId];
+            const idx = list.indexOf(playerName);
+            if (idx > -1) {
+                list.splice(idx, 1);
+                saveToLocalStorage();
+                renderMainView();
+            }
+        }
+
+        function resetCurrentTierlist() {
+            if (!isAdmin || currentGamemode === "overall") return;
+            if (confirm("Are you sure you want to reset this gamemode's tier list?")) {
+                tiers.forEach(t => {
+                    tierData[currentGamemode][t.id] = [];
+                });
+                saveToLocalStorage();
+                renderMainView();
+            }
+        }
+
+        loadFromLocalStorage();
+        renderGamemodeTabs();
+        renderMainView();
+    </script>
+</body>
+</html>
