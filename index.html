@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huztiers | Competitive Minecraft Leaderboards</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.4); border-radius: 9999px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.7); }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white font-sans antialiased">
+
+    <!-- Header / Navigation Bar -->
+    <header class="border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            
+            <!-- Logo & Brand -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-600/30 text-white font-black text-lg">H</div>
+                <div>
+                    <h1 class="text-lg font-black tracking-tight text-white">Huztiers</h1>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Minecraft Leaderboards</p>
+                </div>
+            </div>
+
+            <!-- Gamemodes Quick Navigation Tabs -->
+            <div id="gamemodesTabs" class="flex items-center gap-2 overflow-x-auto max-w-full pb-2 md:pb-0 custom-scrollbar">
+                <!-- Dynamically populated by JS -->
+            </div>
+
+            <!-- Action Controls (Home, Search, Admin Auth) -->
+            <div class="flex items-center gap-2.5">
+                <button id="homeHeaderBtn" onclick="switchGamemode('home')" class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 text-slate-300 transition-all">
+                    <span>🏠</span> Home
+                </button>
+                <button onclick="openSearchModal()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 transition-all">
+                    <span>🔍</span> Search Player
+                </button>
+                <button onclick="handleAuthClick()" class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 transition-all shadow-sm">
+                    <svg id="authIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    <span id="authBtnText">Viewer Mode</span>
+                </button>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="max-w-7xl w-full mx-auto px-6 py-8 flex-1 space-y-6">
+        
+        <!-- Gamemode Sub-Header & Toolbar -->
+        <div id="subViewToolbar" class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-900 pb-6">
+            <div class="flex items-center gap-3">
+                <div id="currentGamemodeIcon" class="w-10 h-10 flex items-center justify-center rounded-2xl bg-slate-900 border border-slate-800 shadow-inner">🏆</div>
+                <div>
+                    <h2 id="currentGamemodeTitle" class="text-xl font-black text-white tracking-tight">Crystal</h2>
+                    <p class="text-xs text-slate-400">Competitive Ranked Tier List</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                <!-- Sub View Switcher (Tiers vs Top 10) -->
+                <div class="flex items-center bg-slate-900/80 p-1 rounded-2xl border border-slate-800">
+                    <button id="btnTierView" onclick="switchSubView('tiers')" class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white transition-all shadow">Tiers</button>
+                    <button id="btnTop10View" onclick="switchSubView('top10')" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-all">Top 10</button>
+                </div>
+
+                <!-- Admin Action Toolbar (Hidden unless logged in) -->
+                <div id="adminToolbar" class="hidden flex items-center gap-2">
+                    <button onclick="openAddPlayerModal()" class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20 transition-all"><span>+</span> Add Player</button>
+                    <button onclick="resetCurrentTierlist()" class="px-3 py-2 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition-all">Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dynamic Content Container -->
+        <div id="mainViewContainer" class="space-y-3">
+            <!-- Dynamically populated by JS -->
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-900 py-6 px-6 text-center text-xs text-slate-400 bg-slate-950/40">
+        <p>&copy; Huztiers. Competitive Minecraft Rankings & Leaderboard Platform.</p>
+    </footer>
+
+    <!-- Password Modal -->
+    <div id="passwordModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
+            <h3 class="text-base font-black text-white">Unlock Admin Access</h3>
+            <p class="text-xs text-slate-400">Enter the admin password to unlock management privileges.</p>
+            <form onsubmit="verifyPassword(event)" class="space-y-3">
+                <input type="password" id="adminPasswordInput" placeholder="Enter password..." class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-xs focus:outline-none focus:border-indigo-500">
+                <div class="flex items-center justify-end gap-2 pt-1">
+                    <button type="button" onclick="closePasswordModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-all">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30 transition-all">Unlock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Player Modal -->
+    <div id="addPlayerModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
+            <h3 class="text-base font-black text-white">Add Ranked Player</h3>
+            <form onsubmit="handleAddPlayerSubmit(event)" class="space-y-3">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Minecraft IGN</label>
+                    <input type="text" id="newPlayerName" placeholder="Player username..." required class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-xs focus:outline-none focus:border-indigo-500">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Region</label>
+                    <select id="newPlayerRegion" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-xs focus:outline-none focus:border-indigo-500">
+                        <option value="US">US</option>
+                        <option value="EU">EU</option>
+                        <option value="AS">AS</option>
+                        <option value="OCE">OCE</option>
+                        <option value="SA">SA</option>
+                    </select>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Tier</label>
+                    <select id="newPlayerTier" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-xs focus:outline-none focus:border-indigo-500">
+                        <option value="HT1">HT1</option>
+                        <option value="LT1">LT1</option>
+                        <option value="HT2">HT2</option>
+                        <option value="LT2">LT2</option>
+                        <option value="HT3">HT3</option>
+                        <option value="LT3">LT3</option>
+                        <option value="HT4">HT4</option>
+                        <option value="LT4">LT4</option>
+                        <option value="HT5">HT5</option>
+                        <option value="LT5">LT5</option>
+                    </select>
+                </div>
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeAddPlayerModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-all">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 transition-all">Add Player</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Search Modal -->
+    <div id="searchModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-black text-white">Search Player Profile</h3>
+                <button onclick="closeSearchModal()" class="text-slate-400 hover:text-white text-base">✕</button>
+            </div>
+            <div class="flex gap-2">
+                <input type="text" id="searchPlayerInput" placeholder="Type Minecraft username..." oninput="performPlayerSearch()" class="flex-1 px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-xs focus:outline-none focus:border-indigo-500">
+            </div>
+            <div id="searchResultsContainer" class="space-y-3 max-h-[360px] overflow-y-auto custom-scrollbar pr-1">
+                <p class="text-xs text-slate-500 text-center py-6">Type a player's username above to view their tiers across all gamemodes.</p>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
